@@ -1,4 +1,3 @@
-/* Reset-ish */
 * {
   box-sizing: border-box;
 }
@@ -6,7 +5,8 @@
 body {
   margin: 0;
   padding: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
   background: radial-gradient(circle at top, #1d4ed8 0, #020617 45%, #000000 100%);
   color: #e5e7eb;
 }
@@ -21,154 +21,101 @@ body {
 
 .card {
   width: 100%;
-  max-width: 480px;
+  max-width: 520px;
   background: rgba(15, 23, 42, 0.96);
   border-radius: 24px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75);
-  padding: 20px 20px 24px;
+  padding: 24px;
   border: 1px solid rgba(148, 163, 184, 0.25);
 }
-
-/* Header */
 
 .card-header h1 {
   margin: 0;
   font-size: 1.4rem;
-  letter-spacing: 0.04em;
 }
 
 .subtitle {
-  margin: 4px 0 0 0;
-  font-size: 0.85rem;
+  margin-top: 4px;
   color: #9ca3af;
 }
-
-/* Status row */
 
 .status-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 14px;
-  font-size: 0.9rem;
-  color: #d1d5db;
+  margin-top: 16px;
 }
 
 .status-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  background: #ef4444; /* red when disconnected */
+  width: 12px;
+  height: 12px;
+  background: #ef4444;
+  border-radius: 50%;
 }
 
-/* Controls */
+.scenario {
+  margin-top: 20px;
+  font-size: 0.9rem;
+}
+
+.scenario select {
+  margin-left: 8px;
+  padding: 5px 10px;
+  border-radius: 8px;
+}
 
 .controls {
   margin-top: 20px;
   display: flex;
-  align-items: center;
   gap: 12px;
+  align-items: center;
 }
 
 .btn {
   border: none;
   border-radius: 999px;
   padding: 8px 16px;
-  font-size: 0.9rem;
   cursor: pointer;
   font-weight: 500;
-  transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.12s ease,
-    opacity 0.12s ease;
+  transition: 0.15s ease;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .btn.primary {
   background: #2563eb;
-  color: #f9fafb;
-  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.45);
+  color: white;
 }
 
-.btn.primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.55);
-}
-
-.btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-/* Mic button */
-
-.mic-btn {
-  width: 56px;
-  height: 56px;
-  border-radius: 999px;
-  border: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.btn.green {
   background: #10b981;
-  color: #022c22;
-  font-size: 1.4rem;
-  cursor: pointer;
-  box-shadow: 0 12px 32px rgba(16, 185, 129, 0.5);
-  transition: transform 0.08s ease, box-shadow 0.08s ease, opacity 0.12s ease,
-    background 0.12s ease;
+  color: white;
 }
 
-.mic-btn:active {
-  transform: translateY(1px) scale(0.96);
-  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.4);
+.btn.red {
+  background: #ef4444;
+  color: white;
 }
-
-.mic-btn.disabled,
-.mic-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-.mic-label {
-  font-size: 0.8rem;
-  color: #9ca3af;
-}
-
-/* Log */
 
 .log-section {
-  margin-top: 20px;
-}
-
-.log-section h2 {
-  margin: 0 0 6px;
-  font-size: 0.95rem;
-  color: #e5e7eb;
+  margin-top: 24px;
 }
 
 .log {
   background: #020617;
   border-radius: 14px;
   border: 1px solid rgba(30, 64, 175, 0.55);
-  padding: 10px 10px;
-  min-height: 140px;
+  padding: 12px;
+  min-height: 150px;
   max-height: 260px;
   overflow-y: auto;
   font-size: 0.85rem;
-  line-height: 1.4;
-  color: #e5e7eb;
-  white-space: pre-wrap;
 }
-
-/* Lines styled by role */
 
 .log-line {
   margin-bottom: 4px;
-}
-
-.log-line.system {
-  color: #9ca3af;
-  font-style: italic;
 }
 
 .log-line.user {
@@ -177,4 +124,9 @@ body {
 
 .log-line.assistant {
   color: #6ee7b7;
+}
+
+.log-line.system {
+  color: #9ca3af;
+  font-style: italic;
 }
