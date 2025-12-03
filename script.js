@@ -1,117 +1,80 @@
-// script.js – Minimal Realtime WebRTC + Push-to-Talk
-
+// DOM references
 const connectBtn = document.getElementById("connect-btn");
-const micBtn = document.getElementById("mic-btn");
-const statusText = document.getElementById("status-text");
+const startBtn = document.getElementById("start-btn");
+const stopBtn = document.getElementById("stop-btn");
+const scenarioSelect = document.getElementById("scenario-select");
 const statusDot = document.getElementById("status-dot");
+const statusText = document.getElementById("status-text");
+const remoteAudio = document.getElementById("remoteAudio");
 const logEl = document.getElementById("log");
 
-let pc = null; // RTCPeerConnection
-let dc = null; // DataChannel "oai-events"
+// Realtime vars
+let pc = null;
+let dc = null;
 let localStream = null;
 let micTrack = null;
 let isConnected = false;
-let isTalking = false;
 
+// Helpers
 function appendLog(role, text) {
-  if (!logEl) return;
   const div = document.createElement("div");
   div.classList.add("log-line", role);
-  let prefix = "";
-  if (role === "user") prefix = "YOU: ";
-  if (role === "assistant") prefix = "AI: ";
-  if (role === "system") prefix = "[system] ";
-  div.textContent = prefix + text;
+  div.textContent = (role === "user" ? "YOU: " : role === "assistant" ? "AI: " : "[system] ") + text;
   logEl.appendChild(div);
   logEl.scrollTop = logEl.scrollHeight;
 }
 
 function setStatus(text, color) {
   statusText.textContent = text;
-  if (color && statusDot) statusDot.style.backgroundColor = color;
+  statusDot.style.background = color;
 }
 
-// -------------------------------
-// Connection setup
-// -------------------------------
+// -------------------------
+// MAIN CONNECT FUNCTION
+// -------------------------
 
 async function connectRealtime() {
-  if (isConnected) {
-    appendLog("system", "Already connected.");
-    return;
-  }
+  if (isConnected) return;
 
-  setStatus("Requesting token...", "#f97316");
+  setStatus("Requesting token...", "#facc15");
   appendLog("system", "Requesting ephemeral key from /api/token...");
 
-  let ephemeralKey;
-  let model;
-
+  let data;
   try {
     const res = await fetch("/api/token");
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.error || "Failed to fetch token");
-    }
-
-    ephemeralKey = data.ephemeralKey;
-    model = data.model || "gpt-4o-realtime-preview-2024-12-17";
-
-    if (!ephemeralKey) {
-      throw new Error("No ephemeralKey returned from /api/token");
-    }
+    data = await res.json();
+    if (!res.ok) throw new Error("Key fetch failed");
   } catch (err) {
-    console.error(err);
-    appendLog("system", "Error: " + err.message);
+    appendLog("system", "Token error: " + err.message);
     setStatus("Error", "#ef4444");
     return;
   }
 
+  const { ephemeralKey, model } = data;
   appendLog("system", "Got ephemeral key. Creating WebRTC connection...");
-
-  try {
-    await startWebRTC(ephemeralKey, model);
-    isConnected = true;
-    setStatus("Connected", "#22c55e");
-    micBtn.disabled = false;
-    appendLog("system", "Connected to Realtime API. Hold the mic button to talk.");
-    connectBtn.textContent = "Disconnect";
-  } catch (err) {
-    console.error(err);
-    appendLog("system", "Failed to establish WebRTC connection: " + err.message);
-    setStatus("Error", "#ef4444");
-  }
+  await startWebRTC(ephemeralKey, model);
 }
+
+// -----------------------------
+// START WEBRTC SESSION
+// -----------------------------
 
 async function startWebRTC(ephemeralKey, model) {
   pc = new RTCPeerConnection({
     iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
   });
 
-  pc.onconnectionstatechange = () => {
-    appendLog("system", "PeerConnection state = " + pc.connectionState);
-    if (
-      pc.connectionState === "disconnected" ||
-      pc.connectionState === "failed" ||
-      pc.connectionState === "closed"
-    ) {
-      setStatus("Disconnected", "#ef4444");
-      micBtn.disabled = true;
-      isConnected = false;
-      connectBtn.textContent = "Connect";
-    }
+  pc.ontrack = (event) => {
+    remoteAudio.srcObject = event.streams[0];
+    appendLog("system", "Attached remote audio track.");
   };
 
-  // Remote audio from model
-  const remoteAudio = new Audio();
-  remoteAudio.autoplay = true;
-
-  pc.ontrack = (event) => {
-    const [stream] = event.streams;
-    if (event.track.kind === "audio") {
-      appendLog("system", "Received remote audio track.");
-      remoteAudio.srcObject = stream;
+  pc.onconnectionstatechange = () => {
+    if (pc.connectionState === "connected") {
+      setStatus("Connected", "#22c55e");
+      appendLog("system", "Connected to Realtime API.");
+      startBtn.disabled = false;
+      stopBtn.disabled = false;
     }
   };
 
@@ -126,51 +89,60 @@ async function startWebRTC(ephemeralKey, model) {
   });
 
   micTrack = localStream.getAudioTracks()[0];
-  micTrack.enabled = false; // Only enabled when user holds mic button
+  micTrack.enabled = false;
   pc.addTrack(micTrack, localStream);
 
-  // DataChannel for events
+  // DataChannel
   dc = pc.createDataChannel("oai-events");
 
-  dc.addEventListener("open", () => {
+  dc.onopen = () => {
     appendLog("system", "DataChannel open.");
 
-    const sessionUpdate = {
-      type: "session.update",
-      session: {
-        modalities: ["text", "audio"],
-        voice: "verse",
-        input_audio_transcription: {
-          model: "gpt-4o-transcribe"
-        },
-        turn_detection: {
-          type: "server_vad"
+    const scenario = scenarioSelect.value;
+    const instructions = {
+      default: "You are a friendly conversational AI.",
+      angry_customer: "Act as an angry customer complaining about service.",
+      sales_pitch: "Act as a curious customer evaluating a product.",
+      price_resistance: "Act as a customer pushing back on price.",
+      service_complaint: "Act as a customer reporting a service issue.",
+      landscaping_quote: "Act as a customer unhappy with a landscaping quote."
+    }[scenario];
+
+    dc.send(
+      JSON.stringify({
+        type: "session.update",
+        session: {
+          voice: "verse",
+          modalities: ["audio", "text"],
+          instructions,
+          input_audio_transcription: { model: "gpt-4o-transcribe" },
+          turn_detection: { type: "server_vad" }
         }
-      }
-    };
+      })
+    );
 
-    dc.send(JSON.stringify(sessionUpdate));
     appendLog("system", "Sent session.update.");
-  });
+  };
 
-  dc.addEventListener("close", () => {
-    appendLog("system", "DataChannel closed.");
-  });
-
-  dc.addEventListener("message", (event) => {
+  dc.onmessage = (ev) => {
     try {
-      const msg = JSON.parse(event.data);
-      handleServerEvent(msg);
-    } catch (_) {
-      // ignore non-JSON
-    }
-  });
+      const msg = JSON.parse(ev.data);
+
+      if (msg.type === "response.output_text.delta") {
+        appendLog("assistant", msg.delta);
+      }
+
+      if (msg.type === "conversation.item.input_audio_transcription.completed") {
+        appendLog("user", msg.transcript);
+      }
+    } catch (e) {}
+  };
 
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
 
-  const response = await fetch(
-    `https://api.openai.com/v1/realtime?model=${encodeURIComponent(model)}`,
+  const ans = await fetch(
+    `https://api.openai.com/v1/realtime?model=${model}`,
     {
       method: "POST",
       body: offer.sdp,
@@ -181,131 +153,36 @@ async function startWebRTC(ephemeralKey, model) {
     }
   );
 
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`SDP exchange failed: ${response.status} ${text}`);
-  }
+  const answerSdp = await ans.text();
+  await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
 
-  const answerSdp = await response.text();
-  await pc.setRemoteDescription({
-    type: "answer",
-    sdp: answerSdp
-  });
-
+  isConnected = true;
   appendLog("system", "SDP handshake complete.");
 }
 
-// -------------------------------
-// Handling Realtime server events
-// -------------------------------
-
-function handleServerEvent(event) {
-  switch (event.type) {
-    case "response.output_text.delta": {
-      const delta = event.delta || "";
-      if (delta.trim()) appendAssistantText(delta);
-      break;
-    }
-    case "conversation.item.input_audio_transcription.completed": {
-      const transcript = event.transcript || "";
-      if (transcript.trim()) appendUserText(transcript);
-      break;
-    }
-    case "response.completed": {
-      appendLog("system", "Assistant response completed.");
-      break;
-    }
-    default:
-      break;
-  }
-}
-
-function appendUserText(text) {
-  appendLog("user", text);
-}
-
-function appendAssistantText(text) {
-  appendLog("assistant", text);
-}
-
-// -------------------------------
-// Push-to-talk controls
-// -------------------------------
+// -------------------------
+// TALKING CONTROL
+// -------------------------
 
 function startTalking() {
-  if (!micTrack || !isConnected) return;
-  if (isTalking) return;
-
   micTrack.enabled = true;
-  isTalking = true;
-  setStatus("Talking...", "#facc15");
+  setStatus("Listening...", "#facc15");
+  appendLog("system", "Microphone ON.");
 }
 
 function stopTalking() {
-  if (!micTrack || !isConnected) return;
-  if (!isTalking) return;
-
   micTrack.enabled = false;
-  isTalking = false;
   setStatus("Connected", "#22c55e");
+  appendLog("system", "Microphone OFF.");
 }
 
-// -------------------------------
-// Cleanup
-// -------------------------------
+// -------------------------
+// EVENT LISTENERS
+// -------------------------
 
-function cleanup() {
-  if (localStream) {
-    localStream.getTracks().forEach((t) => t.stop());
-    localStream = null;
-  }
-  if (dc) {
-    try {
-      dc.close();
-    } catch (_) {}
-    dc = null;
-  }
-  if (pc) {
-    try {
-      pc.close();
-    } catch (_) {}
-    pc = null;
-  }
-  isConnected = false;
-  isTalking = false;
-  micBtn.disabled = true;
-  setStatus("Disconnected", "#ef4444");
-  connectBtn.textContent = "Connect";
-  appendLog("system", "Cleaned up connection.");
-}
+connectBtn.onclick = () => {
+  if (!isConnected) connectRealtime();
+};
 
-// -------------------------------
-// Wire up UI events
-// -------------------------------
-
-connectBtn.addEventListener("click", () => {
-  if (!isConnected) {
-    connectRealtime();
-  } else {
-    cleanup();
-  }
-});
-
-micBtn.addEventListener("mousedown", startTalking);
-micBtn.addEventListener("touchstart", (e) => {
-  e.preventDefault();
-  startTalking();
-});
-
-["mouseup", "mouseleave"].forEach((ev) => {
-  micBtn.addEventListener(ev, stopTalking);
-});
-
-micBtn.addEventListener("touchend", (e) => {
-  e.preventDefault();
-  stopTalking();
-});
-
-window.addEventListener("beforeunload", () => {
-  cleanup();
-});
+startBtn.onclick = startTalking;
+stopBtn.onclick = stopTalking;
