@@ -6,28 +6,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="./style.css" />
   </head>
+
   <body>
     <div class="page">
       <main class="card">
         <header class="card-header">
           <h1>D.O.N</h1>
-          <p class="subtitle">Minimal realtime voice chat</p>
+          <p class="subtitle">Realtime voice training agent</p>
         </header>
 
+        <!-- Connection Status -->
         <section class="status-row">
           <span class="status-dot" id="status-dot"></span>
           <span id="status-text">Disconnected</span>
         </section>
 
+        <!-- Scenario Selector -->
+        <section class="scenario">
+          <label for="scenario-select">Scenario:</label>
+          <select id="scenario-select">
+            <option value="default">General conversation</option>
+            <option value="angry_customer">Angry Customer</option>
+            <option value="sales_pitch">Sales Pitch</option>
+            <option value="price_resistance">Price Objection</option>
+            <option value="service_complaint">Service Complaint</option>
+            <option value="landscaping_quote">Landscaping Quote Dispute</option>
+          </select>
+        </section>
+
+        <!-- Controls -->
         <section class="controls">
           <button id="connect-btn" class="btn primary">Connect</button>
 
-          <button id="mic-btn" class="mic-btn" disabled>
-            <span class="mic-icon">🎙️</span>
+          <button id="start-btn" class="btn green" disabled>
+            Start Talking
           </button>
-          <span class="mic-label">Hold to talk</span>
+
+          <button id="stop-btn" class="btn red" disabled>
+            Stop Talking
+          </button>
         </section>
 
+        <audio id="remoteAudio" autoplay playsinline></audio>
+
+        <!-- Transcript -->
         <section class="log-section">
           <h2>Transcript</h2>
           <div id="log" class="log"></div>
