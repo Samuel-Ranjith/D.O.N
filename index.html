@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>D.O.N – Realtime Voice Trainer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="page">
+      <main class="card">
+        <header class="card-header">
+          <h1>D.O.N</h1>
+          <p class="subtitle">Minimal realtime voice chat</p>
+        </header>
+
+        <section class="status-row">
+          <span class="status-dot" id="status-dot"></span>
+          <span id="status-text">Disconnected</span>
+        </section>
+
+        <section class="controls">
+          <button id="connect-btn" class="btn primary">Connect</button>
+
+          <button id="mic-btn" class="mic-btn" disabled>
+            <span class="mic-icon">🎙️</span>
+          </button>
+          <span class="mic-label">Hold to talk</span>
+        </section>
+
+        <section class="log-section">
+          <h2>Transcript</h2>
+          <div id="log" class="log"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
